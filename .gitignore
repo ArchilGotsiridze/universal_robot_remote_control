@@ -2,3 +2,4 @@ app.py
 polyscope/
 rtde/__pycache__/
 .env
+__pycache__/

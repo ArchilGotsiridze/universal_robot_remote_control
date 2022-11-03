@@ -3,13 +3,13 @@ from time import sleep
 import sys
 
 
-class RTDESetup():
+class RTDESetup:
 
-    def _init_(self, IP, PORT, FREQUENCY):
+    def __init__(self, IP, PORT, FREQUENCY):
         self._IP = IP
         self._PORT = PORT
         self._FREQUENCY = FREQUENCY
-        self._states = dict()
+        self.states = []
         self._setp = (
             {'name': "input_double_register_0", 'type': "DOUBLE"},
             {'name': "input_double_register_1", 'type': "DOUBLE"},
