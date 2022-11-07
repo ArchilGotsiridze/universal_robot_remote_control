@@ -5,10 +5,10 @@ import sys
 
 class RTDESetup:
 
-    def __init__(self, IP, PORT, FREQUENCY):
+    def __init__(self, IP, PORT, frequency=125):
         self._IP = IP
         self._PORT = PORT
-        self._FREQUENCY = FREQUENCY
+        self._frequency = frequency
         self.states = []
         self._setp = (
             {'name': "input_double_register_0", 'type': "DOUBLE"},
@@ -20,40 +20,53 @@ class RTDESetup:
             {'name': "input_bit_registers0_to_31", 'type': "UINT32"},
         )
         self._watchdog = (
-            {'watchdog_name': 'input_int_register_0', 'watchdog_type': 'INT32'}
+            {'name': 'input_int_register_0', 'type': 'INT32'},
         )
         self._con = 'disconnected'
 
-    def get_names(cfg):
+    @property
+    def frequency(self):
+        return self._frequency
+
+    @frequency.setter
+    def frequency(self, frequency):
+        if type(frequency) == int and frequency <= 500 and frequency > 0:
+            self._frequency = frequency
+        else:
+            print("Value of frequency must be integer between 0 and 500")
+
+    def _get_names(cfg):
         return [i['name'] for i in cfg]
 
-    def get_types(cfg):
+    def _get_types(cfg):
         return [i['type'] for i in cfg]
 
     def connect(self):
-        self.con = rtde.RTDE(self._IP, self._PORT)
-        connection_state = self.con.connect()
-
+        self._con = rtde.RTDE(self._IP, self._PORT)
+        connection_state = self._con.connect()
         while connection_state != 0:
             sleep(0.5)
-            connection_state = self.con.connect()
+            connection_state = self._con.connect()
         print("-------------Successfully connected to the robot RTDE-----------\n")
 
-        self.con.get_controller_version()
-        return self.con
+        self._con.get_controller_version()
+        return self._con
 
     def setup_recipes(self):
-        self.con.send_output_setup(
-            self.get_names(self._states), self.get_types(self._states),
-            self.FREQUENCY
+
+        self._con.send_output_setup(
+            RTDESetup._get_names(self.states),
+            RTDESetup._get_types(self.states),
+            self._frequency
         )
 
         # input packages
-        setp = self.con.send_input_setup(
-            self.get_names(self._setp), self.get_types(self._setp)
+        setp = self._con.send_input_setup(
+            RTDESetup._get_names(self._setp), RTDESetup._get_types(self._setp)
         )
-        watchdog = self.con.send_input_setup(
-            self.get_names(self._watchdog), self.get_types(self._watchdog)
+        watchdog = self._con.send_input_setup(
+            RTDESetup._get_names(
+                self._watchdog), RTDESetup._get_types(self._watchdog)
         )
 
         setp.input_double_register_0 = 0
@@ -68,14 +81,15 @@ class RTDESetup:
         watchdog.input_int_register_0 = 0
 
     def synchronize_data(self, state_name):
-        if not self.con.send_start():
+        if not self._con.send_start():
             sys.exit()
 
-        state = self.con.receive()
+        state = self._con.receive()
 
-        state_names = ()
+        state_names = RTDESetup._get_names(self.states)
 
         if state_name in state_names:
-            return state.state_name
+            # return state.actual_TCP_pose
+            return getattr(state, state_name)
         else:
             return f'state name: {state_name} not mentioned in config'
